@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const ROLES = [
@@ -25,7 +25,7 @@ function RoleIcon({ type, size = 20 }) {
     }
 }
 
-function FFLogo({ size = 72 }) {
+function FFLogo({ size = 84 }) {
     return (
         <svg viewBox="0 0 72 72" width={size} height={size}>
             <circle cx="36" cy="36" r="36" fill="#714b67" />
@@ -66,6 +66,14 @@ function LoaderIcon({ size = 16 }) {
     );
 }
 
+function CheckIcon({ size = 16 }) {
+    return (
+        <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6L9 17l-5-5" />
+        </svg>
+    );
+}
+
 export default function AuthPage() {
     const router = useRouter();
     const [mode, setMode] = useState('login');
@@ -74,6 +82,7 @@ export default function AuthPage() {
     const [name, setName] = useState('');
     const [role, setRole] = useState('');
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
     const [logoMorph, setLogoMorph] = useState(false);
 
@@ -86,6 +95,7 @@ export default function AuthPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccess('');
         setLoading(true);
 
         try {
@@ -109,9 +119,13 @@ export default function AuthPage() {
                 });
                 const data = await res.json();
                 if (!res.ok) { setError(data.error); setLoading(false); return; }
-                localStorage.setItem('fleetflow_token', data.token);
-                localStorage.setItem('fleetflow_user', JSON.stringify(data.user));
-                router.push('/dashboard');
+                // Don't auto-login — switch to login tab with success message
+                setMode('login');
+                setSuccess('Account created successfully! Please sign in.');
+                setName('');
+                setPassword('');
+                setRole('');
+                setLoading(false);
             }
         } catch {
             setError('Connection failed');
@@ -122,6 +136,7 @@ export default function AuthPage() {
     const switchMode = () => {
         setMode(mode === 'login' ? 'register' : 'login');
         setError('');
+        setSuccess('');
         setRole('');
     };
 
@@ -132,9 +147,9 @@ export default function AuthPage() {
                 <div className="login-logo">
                     <div className={`login-logo-icon ${logoMorph ? 'logo-morph' : ''}`}>
                         {mode === 'login' || !role ? (
-                            <FFLogo size={72} />
+                            <FFLogo size={84} />
                         ) : (
-                            <svg viewBox="0 0 72 72" width={72} height={72}>
+                            <svg viewBox="0 0 72 72" width={84} height={84}>
                                 <circle cx="36" cy="36" r="36" fill="#714b67" />
                                 <g transform="translate(24, 24)" style={{ color: '#fff' }}>
                                     <RoleIcon type={role} size={24} />
@@ -143,7 +158,7 @@ export default function AuthPage() {
                         )}
                     </div>
                     <h1>FleetFlow</h1>
-                    <p>Fleet & Logistics Management System</p>
+                    <p>Fleet &amp; Logistics Management System</p>
                 </div>
 
                 {/* Tab toggle */}
@@ -156,11 +171,28 @@ export default function AuthPage() {
                     </button>
                     <button
                         className={`auth-tab ${mode === 'register' ? 'active' : ''}`}
-                        onClick={() => { setMode('register'); setError(''); }}
+                        onClick={() => { setMode('register'); setError(''); setSuccess(''); }}
                     >
                         <UserPlusIcon size={14} /> Register
                     </button>
                 </div>
+
+                {success && (
+                    <div style={{
+                        background: 'rgba(22, 163, 74, 0.08)',
+                        color: '#16a34a',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        fontSize: '.92rem',
+                        marginBottom: '14px',
+                        border: '1px solid rgba(22, 163, 74, 0.15)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                    }}>
+                        <CheckIcon size={16} /> {success}
+                    </div>
+                )}
 
                 {error && <div className="login-error">{error}</div>}
 
@@ -228,7 +260,7 @@ export default function AuthPage() {
                         <>
                             <span>Don&apos;t have an account? </span>
                             <a href="#" onClick={(e) => { e.preventDefault(); switchMode(); }}>Register here</a>
-                            <div style={{ marginTop: '12px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            <div style={{ marginTop: '12px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                                 Demo: manager@fleetflow.com / admin123
                             </div>
                         </>

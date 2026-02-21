@@ -1,5 +1,10 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { Chart, BarController, LineController, DoughnutController, PieController, BarElement, LineElement, PointElement, ArcElement, CategoryScale, LinearScale, Tooltip, Legend, Filler } from 'chart.js';
+
+Chart.register(BarController, LineController, DoughnutController, PieController, BarElement, LineElement, PointElement, ArcElement, CategoryScale, LinearScale, Tooltip, Legend, Filler);
+
+const CHART_DEFAULTS = { responsive: true, maintainAspectRatio: false, animation: { duration: 0 }, plugins: { legend: { display: false } } };
 
 export default function AnalyticsPage() {
     const [data, setData] = useState(null);
@@ -17,69 +22,66 @@ export default function AnalyticsPage() {
     useEffect(() => {
         if (!data || loading) return;
 
-        // Dynamic import Chart.js only on client
-        import('chart.js/auto').then(({ default: Chart }) => {
-            // Destroy old charts
-            charts.current.forEach(c => c.destroy());
-            charts.current = [];
+        // Destroy old charts
+        charts.current.forEach(c => c.destroy());
+        charts.current = [];
 
-            const kpis = data.kpis || {};
-            const costBreakdown = data.costBreakdown || [];
+        const kpis = data.kpis || {};
+        const costBreakdown = data.costBreakdown || [];
 
-            // Fuel Efficiency Bar Chart
-            if (fuelRef.current) {
-                const labels = (data.fuelEfficiency || []).map(v => v.vehicle_name);
-                const values = (data.fuelEfficiency || []).map(v => v.cost_per_km || 0);
-                charts.current.push(new Chart(fuelRef.current, {
-                    type: 'bar',
-                    data: { labels, datasets: [{ label: 'Cost / km (₹)', data: values, backgroundColor: '#714b67', borderRadius: 4 }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
-                }));
-            }
+        // Fuel Efficiency Bar Chart
+        if (fuelRef.current) {
+            const labels = (data.fuelEfficiency || []).map(v => v.vehicle_name);
+            const values = (data.fuelEfficiency || []).map(v => v.cost_per_km || 0);
+            charts.current.push(new Chart(fuelRef.current, {
+                type: 'bar',
+                data: { labels, datasets: [{ label: 'Cost / km (₹)', data: values, backgroundColor: '#714b67', borderRadius: 4 }] },
+                options: { ...CHART_DEFAULTS, scales: { y: { beginAtZero: true } } },
+            }));
+        }
 
-            // Revenue vs Expenses Line Chart
-            if (revenueRef.current) {
-                const trends = data.monthlyTrends || [];
-                const labels = trends.map(t => t.month);
-                charts.current.push(new Chart(revenueRef.current, {
-                    type: 'line',
-                    data: {
-                        labels,
-                        datasets: [
-                            { label: 'Revenue', data: trends.map(t => t.revenue || 0), borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,.08)', fill: true, tension: .3 },
-                            { label: 'Expenses', data: trends.map(t => t.expenses || 0), borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,.06)', fill: true, tension: .3 },
-                        ],
-                    },
-                    options: { responsive: true, maintainAspectRatio: false },
-                }));
-            }
+        // Revenue vs Expenses Line Chart
+        if (revenueRef.current) {
+            const trends = data.monthlyTrends || [];
+            const labels = trends.map(t => t.month);
+            charts.current.push(new Chart(revenueRef.current, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Revenue', data: trends.map(t => t.revenue || 0), borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,.08)', fill: true, tension: .3, pointRadius: 2 },
+                        { label: 'Expenses', data: trends.map(t => t.expenses || 0), borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,.06)', fill: true, tension: .3, pointRadius: 2 },
+                    ],
+                },
+                options: { ...CHART_DEFAULTS, plugins: { legend: { display: true } } },
+            }));
+        }
 
-            // Cost breakdown Doughnut
-            if (costRef.current) {
-                const top5 = costBreakdown.slice(0, 5);
-                charts.current.push(new Chart(costRef.current, {
-                    type: 'doughnut',
-                    data: {
-                        labels: top5.map(v => v.vehicle_name),
-                        datasets: [{ data: top5.map(v => v.total_cost || 0), backgroundColor: ['#714b67', '#8a6580', '#b0a8ad', '#c4a3a6', '#ddd'] }],
-                    },
-                    options: { responsive: true, maintainAspectRatio: false },
-                }));
-            }
+        // Cost breakdown Doughnut
+        if (costRef.current) {
+            const top5 = costBreakdown.slice(0, 5);
+            charts.current.push(new Chart(costRef.current, {
+                type: 'doughnut',
+                data: {
+                    labels: top5.map(v => v.vehicle_name),
+                    datasets: [{ data: top5.map(v => v.total_cost || 0), backgroundColor: ['#714b67', '#8a6580', '#b0a8ad', '#c4a3a6', '#ddd'] }],
+                },
+                options: { ...CHART_DEFAULTS, plugins: { legend: { display: true, position: 'bottom' } } },
+            }));
+        }
 
-            // Fleet type Pie
-            if (typeRef.current) {
-                const vehicleTypes = data.vehicleTypes || { Truck: 0, Van: 0, Bike: 0 };
-                charts.current.push(new Chart(typeRef.current, {
-                    type: 'pie',
-                    data: {
-                        labels: Object.keys(vehicleTypes),
-                        datasets: [{ data: Object.values(vehicleTypes), backgroundColor: ['#714b67', '#b0a8ad', '#c4a3a6'] }],
-                    },
-                    options: { responsive: true, maintainAspectRatio: false },
-                }));
-            }
-        });
+        // Fleet type Pie
+        if (typeRef.current) {
+            const vehicleTypes = data.vehicleTypes || { Truck: 0, Van: 0, Bike: 0 };
+            charts.current.push(new Chart(typeRef.current, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(vehicleTypes),
+                    datasets: [{ data: Object.values(vehicleTypes), backgroundColor: ['#714b67', '#b0a8ad', '#c4a3a6'] }],
+                },
+                options: { ...CHART_DEFAULTS, plugins: { legend: { display: true, position: 'bottom' } } },
+            }));
+        }
 
         return () => { charts.current.forEach(c => c.destroy()); };
     }, [data, loading]);

@@ -30,13 +30,18 @@ export default function DriversPage() {
         fetchDrivers();
     };
 
-    const toggleStatus = async (driver) => {
-        const next = driver.status === 'On Duty' ? 'Off Duty' : 'On Duty';
+    const updateStatus = async (driver, newStatus) => {
         await fetch(`/api/drivers/${driver.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: next }),
+            body: JSON.stringify({ status: newStatus }),
         });
+        fetchDrivers();
+    };
+
+    const deleteDriver = async (driver) => {
+        if (!confirm(`Delete driver "${driver.name}"? This cannot be undone.`)) return;
+        await fetch(`/api/drivers/${driver.id}`, { method: 'DELETE' });
         fetchDrivers();
     };
 
@@ -47,6 +52,17 @@ export default function DriversPage() {
         if (daysLeft < 0) return { label: 'Expired', className: 'expired' };
         if (daysLeft < 30) return { label: `${daysLeft}d left`, className: 'expiring' };
         return { label: 'Valid', className: 'valid' };
+    };
+
+    const getStatusActions = (driver) => {
+        const actions = [];
+        if (driver.status !== 'On Trip') {
+            if (driver.status !== 'On Duty') actions.push({ label: 'On Duty', status: 'On Duty' });
+            if (driver.status !== 'Off Duty') actions.push({ label: 'Off Duty', status: 'Off Duty' });
+            if (driver.status !== 'Suspended') actions.push({ label: 'Suspend', status: 'Suspended' });
+            if (driver.status !== 'Retired') actions.push({ label: 'Retire', status: 'Retired' });
+        }
+        return actions;
     };
 
     return (
@@ -62,9 +78,10 @@ export default function DriversPage() {
                 {drivers.map(driver => {
                     const lic = getLicenseStatus(driver.license_expiry);
                     const safetyColor = driver.safety_score >= 80 ? 'var(--green)' : driver.safety_score >= 50 ? 'var(--yellow)' : 'var(--red)';
+                    const statusActions = getStatusActions(driver);
 
                     return (
-                        <div className="driver-card" key={driver.id}>
+                        <div className="driver-card" key={driver.id} style={driver.status === 'Retired' ? { opacity: 0.6 } : {}}>
                             <div className="driver-card-header">
                                 <div className="driver-avatar">{driver.name?.charAt(0)}</div>
                                 <div className="driver-meta">
@@ -97,12 +114,15 @@ export default function DriversPage() {
                                 </div>
                                 <div>
                                     <div className="driver-stat-label">Actions</div>
-                                    <div className="driver-stat-value">
-                                        {driver.status !== 'On Trip' && (
-                                            <button className="btn btn-sm btn-secondary" onClick={() => toggleStatus(driver)}>
-                                                {driver.status === 'On Duty' ? 'Off Duty' : 'On Duty'}
+                                    <div className="driver-stat-value" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                        {statusActions.map(a => (
+                                            <button key={a.status} className="btn btn-sm btn-secondary" onClick={() => updateStatus(driver, a.status)}>
+                                                {a.label}
                                             </button>
-                                        )}
+                                        ))}
+                                        <button className="btn btn-sm" style={{ background: 'var(--red)', color: '#fff' }} onClick={() => deleteDriver(driver)}>
+                                            Delete
+                                        </button>
                                     </div>
                                 </div>
                             </div>
